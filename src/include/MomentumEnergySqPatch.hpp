@@ -10,10 +10,10 @@ template<typename T = double, typename ArrayT = std::vector<T>>
 class MomentumEnergySqPatch
 {
 public:
-    MomentumEnergySqPatch(const int stabilizationTimesteps = -1, const T K = compute_3d_k(5.0)) : 
-    stabilizationTimesteps(stabilizationTimesteps), K(K) {}
+    MomentumEnergySqPatch(const int stabilizationTimesteps = -1, const T sincIndex = 6.0, const T K = compute_3d_k(6.0)) : 
+    stabilizationTimesteps(stabilizationTimesteps), sincIndex(sincIndex), K(K) {}
 
-    void compute(const std::vector<int> &clist, const int iteration, const std::vector<std::vector<int>> &neighbors, 
+    void compute(const std::vector<int> &clist, const BBox<T> &bbox, const int iteration, const std::vector<std::vector<int>> &neighbors, 
         const ArrayT &x, const ArrayT &y, const ArrayT &z, const ArrayT &h,
         const ArrayT &vx, const ArrayT &vy, const ArrayT &vz, 
         const ArrayT &ro, const ArrayT &p, const ArrayT &c, const ArrayT &m,
@@ -48,6 +48,16 @@ public:
                 T r_ijy = (y[i] - y[nid]);
                 T r_ijz = (z[i] - z[nid]);
 
+                // Handling PBC
+                if(bbox.PBCx && r_ijx > 2*h[i]) r_ijx -= (bbox.xmax-bbox.xmin);
+                else if(r_ijx < -2*h[i]) r_ijx += (bbox.xmax-bbox.xmin);
+                
+                if(bbox.PBCy && r_ijy > 2*h[i]) r_ijy -= (bbox.ymax-bbox.ymin);
+                else if(r_ijy < -2*h[i]) r_ijy += (bbox.ymax-bbox.ymin);
+                
+                if(bbox.PBCz && r_ijz > 2*h[i]) r_ijz -= (bbox.zmax-bbox.zmin);
+                else if(r_ijz < -2*h[i]) r_ijz += (bbox.zmax-bbox.zmin);
+
                 T v_ijx = (vx[i] - vx[nid]);
                 T v_ijy = (vy[i] - vy[nid]);
                 T v_ijz = (vz[i] - vz[nid]);
@@ -58,16 +68,12 @@ public:
 
                 T viscosity_ij = artificial_viscosity(ro[i], ro[nid], h[i], h[nid], c[i], c[nid], rv, r_square);
                 
-                // if(isnan(viscosity_ij))
-                //     printf("ERROR::MomentumEnergy::artificial_viscosity(%d %d) c_i %f c_j %f h_i %f h_j %f rv %f r_square %f ro_i %f ro_j %f\n", 
-                //      i, nid, c[i], c[nid], h_i, h_j, rv, r_square, ro_i, ro_j);
-
                 T r_ij = sqrt(r_square);
                 T rv_i = r_ij / h[i];
                 T rv_j = r_ij / h[nid];
 
-                T derivative_kernel_i = wharmonic_derivative(rv_i, h[i], K);
-                T derivative_kernel_j = wharmonic_derivative(rv_j, h[nid], K);
+                T derivative_kernel_i = wharmonic_derivative(rv_i, h[i], sincIndex, K);
+                T derivative_kernel_j = wharmonic_derivative(rv_j, h[nid], sincIndex, K);
                 
                 T grad_v_kernel_x_i = r_ijx * derivative_kernel_i;
                 T grad_v_kernel_x_j = r_ijx * derivative_kernel_j;
@@ -86,54 +92,36 @@ public:
                    force_i_j_r = 0.0;
 
                 T A_j = 0.0;
-
-                if(p[nid] < 0.0)
-                    A_j = 1.0;
+                if(p[nid] < 0.0) A_j = 1.0;
 
                 T delta_pos_i_j = 0.0;
-
-                if(p[i] > 0.0 && p[nid] > 0.0)
-                    delta_pos_i_j = 1.0;
+                if(p[i] > 0.0 && p[nid] > 0.0) delta_pos_i_j = 1.0;
 
                 T R_i_j = ep1 * (A_i * abs(p[i]) + A_j * abs(p[nid])) + ep2 * delta_pos_i_j * (abs(p[i]) + abs(p[nid]));
 
-                // if(std::isnan(ep1))
-                //     std::cout << "Ep1 is nan" << std::endl;
-
                 T r_force_i_j = R_i_j * pow(force_i_j_r, mre);
-
-                // if(std::isnan(r_force_i_j))
-                //     std::cout << "r_force_i_j is nan" << std::endl;
 
                 T partial_repulsive_force = (r_force_i_j / (ro[i] * ro[nid])) * m[nid];
 
-                // if(std::isnan(partial_repulsive_force))
-                //     printf("partial_repulsive_force: %f %f %f %f\n", ro_i, ro_j, m_j, r_force_i_j);
-
-                T repulsive_force_x = partial_repulsive_force * grad_v_kernel_x_i_j;
-                T repulsive_force_y = partial_repulsive_force * grad_v_kernel_y_i_j;
-                T repulsive_force_z = partial_repulsive_force * grad_v_kernel_z_i_j;
-
-                if(std::isnan(repulsive_force_x) && std::isnan(repulsive_force_y) && std::isnan(repulsive_force_z))
-                   std::cout << "repulsive_force_x y or z is nan" << std::endl;
-
                 momentum_x += (p[i]/(gradh_i * ro[i] * ro[i]) * grad_v_kernel_x_i) 
                     + (p[nid]/(gradh_j * ro[nid] * ro[nid]) * grad_v_kernel_x_j) 
-                    + viscosity_ij * grad_v_kernel_x_i_j + repulsive_force_x;
+                    + grad_v_kernel_x_i_j * (viscosity_ij + partial_repulsive_force);
                 momentum_y += (p[i]/(gradh_i * ro[i] * ro[i]) * grad_v_kernel_y_i) 
                     + (p[nid]/(gradh_j * ro[nid] * ro[nid]) * grad_v_kernel_y_j) 
-                    + viscosity_ij * grad_v_kernel_y_i_j + repulsive_force_y;
+                    + grad_v_kernel_y_i_j * (viscosity_ij + partial_repulsive_force);
                 momentum_z += (p[i]/(gradh_i * ro[i] * ro[i]) * grad_v_kernel_z_i) 
                     + (p[nid]/(gradh_j * ro[nid] * ro[nid]) * grad_v_kernel_z_j) 
-                    + viscosity_ij * grad_v_kernel_z_i_j + repulsive_force_z;
+                    + grad_v_kernel_z_i_j * (viscosity_ij + partial_repulsive_force);
                 
-                energy +=  m[nid] * (1 + 0.5 * viscosity_ij) * (v_ijx * grad_v_kernel_x_i + v_ijy * grad_v_kernel_y_i + v_ijz * grad_v_kernel_z_i);
+                energy += m[nid] * (1.0 + 0.5 * viscosity_ij) * (v_ijx * grad_v_kernel_x_i + v_ijy * grad_v_kernel_y_i + v_ijz * grad_v_kernel_z_i);
             }
 
             if(std::isnan(momentum_x) || std::isnan(momentum_y) || std::isnan(momentum_z))
                 printf("ERROR::MomentumEnergy(%d) MomentumEnergy (%f %f %f)\n", i, momentum_x, momentum_y, momentum_z);
 
-            du[i] =  energy * (-p[i]/(gradh_i * ro[i] * ro[i]));
+            // 2.0 * p[i]???
+            du[i] = energy;
+            //du[i] =  energy * (-p[i]/(gradh_i * ro[i] * ro[i]));
 
             if(std::isnan(du[i]))
                 printf("ERROR:Energy du %f energy %f p_i %f gradh_i %f ro_i %f\n", du[i], energy, p[i], gradh_i, ro[i]);
@@ -146,7 +134,7 @@ public:
 
 private:
     const int stabilizationTimesteps;
-    const T K;
+    const T sincIndex, K;
 };
 
 }
