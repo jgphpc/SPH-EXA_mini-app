@@ -3,7 +3,7 @@
 #include <vector>
 
 #ifdef USE_MPI
-	#include "mpi.h"
+    #include "mpi.h"
 #endif
 
 namespace sphexa
@@ -24,12 +24,12 @@ template<typename T, class Tree = Octree<T>, class ArrayT = std::vector<T>>
 class Domain
 {
 public:
-	Domain(int ngmin, int ng0, int ngmax, unsigned int bucketSize = 128) : 
-		ngmin(ngmin), ng0(ng0), ngmax(ngmax), bucketSize(bucketSize) {}
+    Domain(int ngmin, int ng0, int ngmax, unsigned int bucketSize = 128) : 
+        ngmin(ngmin), ng0(ng0), ngmax(ngmax), bucketSize(bucketSize) {}
 
-	void computeBBox(const ArrayT &x, const ArrayT &y, const ArrayT &z, BBox<T> &bbox)
-	{
-		int n = x.size();
+    void computeBBox(const ArrayT &x, const ArrayT &y, const ArrayT &z, BBox<T> &bbox)
+    {
+        int n = x.size();
 
         if(!bbox.PBCx) bbox.xmin = INFINITY;
         if(!bbox.PBCx) bbox.xmax = -INFINITY;
@@ -47,7 +47,7 @@ public:
             if(!bbox.PBCz && z[i] < bbox.zmin) bbox.zmin = z[i];
             if(!bbox.PBCz && z[i] > bbox.zmax) bbox.zmax = z[i];
         }
-	}
+    }
 
     void reorderSwap(const std::vector<int> &ordering, ArrayT &data)
     {
@@ -57,69 +57,85 @@ public:
         tmp.swap(data);
     }
 
-	void reorder(std::vector<ArrayT*> &data)
+    void reorder(std::vector<ArrayT*> &data)
     {
         for(unsigned int i=0; i<data.size(); i++)
             reorderSwap(*tree.ordering, *data[i]);
     }
 
-	void buildTree(const ArrayT &x, const ArrayT &y, const ArrayT &z, const ArrayT &h, BBox<T> &bbox)
-	{
-		computeBBox(x, y, z, bbox);
-		tree.build(bbox, x, y, z, h, bucketSize);
-	}
+    void buildTree(const ArrayT &x, const ArrayT &y, const ArrayT &z, const ArrayT &h, BBox<T> &bbox)
+    {
+        computeBBox(x, y, z, bbox);
+        tree.build(bbox, x, y, z, h, bucketSize);
+    }
 
-	void findNeighbors(const std::vector<int> &clist, const BBox<T> &bbox, const ArrayT &x, const ArrayT &y, const ArrayT &z, ArrayT &h, std::vector<std::vector<int>> &neighbors)
-	{
-		int n = clist.size();
-		neighbors.resize(n);
+    void findNeighbors(const std::vector<int> &clist, const BBox<T> &bbox, const ArrayT &x, const ArrayT &y, const ArrayT &z, ArrayT &h, std::vector<std::vector<int>> &neighbors)
+    {
+        int n = clist.size();
+        neighbors.resize(n);
 
-		#pragma omp parallel for
-		for(int pi=0; pi<n; pi++)
-		{
-			int i = clist[pi];
+        #pragma omp parallel for
+        for(int pi=0; pi<n; pi++)
+        {
+            int i = clist[pi];
 
             neighbors[pi].resize(0);
             tree.findNeighbors(x[i], y[i], z[i], 2*h[i], ngmax, neighbors[pi], bbox.PBCx, bbox.PBCy, bbox.PBCz);
             
             if(neighbors[pi].size() == 0)
-            	printf("ERROR::FindNeighbors(%d) x %f y %f z %f h = %f ngi %zu\n", i, x[i], y[i], z[i], h[i], neighbors[pi].size());
-	    }
-	}
+                printf("ERROR::FindNeighbors(%d) x %f y %f z %f h = %f ngi %zu\n", i, x[i], y[i], z[i], h[i], neighbors[pi].size());
+        }
+    }
 
-	int neighborsSum(const std::vector<int> &clist, const std::vector<std::vector<int>> &neighbors)
-	{
-	    int sum = 0;
-	    #pragma omp parallel for reduction (+:sum)
-	    for(unsigned int i=0; i<clist.size(); i++)
-	        sum += neighbors[i].size();
+    void gravityWalk(const std::vector<int> &clist, const BBox<T> &bbox, const ArrayT &x, const ArrayT &y, const ArrayT &z, const ArrayT &m)
+    {
+        int n = clist.size();
+        std::cout << "N= " << n <<std:endl;
+        #pragma omp parallel for
+        for(int pi=0; pi<n; pi++)
+        {
+            int i = clist[pi];
+            tree.gravityWalk(x[i], y[i], z[i], m[i]);
+            if(i==50000){
+                std::cout << tree.getMass() << std::endl;
+            }
+        }
+        std::cout << "END gravity walk in domain" << std::endl;
+    }
 
-	    #ifdef USE_MPI
-	        MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-	        MPI_Barrier(MPI_COMM_WORLD);
-	    #endif
+    int neighborsSum(const std::vector<int> &clist, const std::vector<std::vector<int>> &neighbors)
+    {
+        int sum = 0;
+        #pragma omp parallel for reduction (+:sum)
+        for(unsigned int i=0; i<clist.size(); i++)
+            sum += neighbors[i].size();
 
-	    return sum;
-	}
+        #ifdef USE_MPI
+            MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Barrier(MPI_COMM_WORLD);
+        #endif
 
-	void updateSmoothingLength(const std::vector<int> &clist, const std::vector<std::vector<int>> &neighbors, ArrayT &h)
-	{
-		int n = clist.size();
+        return sum;
+    }
 
-		#pragma omp parallel for
-		for(int pi=0; pi<n; pi++)
-		{
-			int i = clist[pi];
-			int ngi = neighbors[pi].size();
-			
-	        h[i] = update_smoothing_length(ng0, ngi, h[i]);
+    void updateSmoothingLength(const std::vector<int> &clist, const std::vector<std::vector<int>> &neighbors, ArrayT &h)
+    {
+        int n = clist.size();
 
-	        if(std::isinf(h[i]) || std::isnan(h[i]))
-	        	printf("ERROR::h(%d) ngi %d h %f\n", i, ngi, h[i]);
-	    }
-	}
+        #pragma omp parallel for
+        for(int pi=0; pi<n; pi++)
+        {
+            int i = clist[pi];
+            int ngi = neighbors[pi].size();
+            
+            h[i] = update_smoothing_length(ng0, ngi, h[i]);
 
-	inline void removeIndices(const std::vector<bool> indices, std::vector<ArrayT*> &data)
+            if(std::isinf(h[i]) || std::isnan(h[i]))
+                printf("ERROR::h(%d) ngi %d h %f\n", i, ngi, h[i]);
+        }
+    }
+
+    inline void removeIndices(const std::vector<bool> indices, std::vector<ArrayT*> &data)
     {
         for(unsigned int i=0; i<data.size(); i++)
         {
@@ -140,9 +156,9 @@ public:
     }
 
 private:
-	Tree tree;
-	const int ngmin, ng0, ngmax;
-	const unsigned int bucketSize;
+    Tree tree;
+    const int ngmin, ng0, ngmax;
+    const unsigned int bucketSize;
 };
 
 }

@@ -54,9 +54,21 @@ int main()
         REPORT_TIME(d.rank, domain.buildTree(d.x, d.y, d.z, d.h, d.bbox), "BuildTree");
         // REPORT_TIME(d.rank, mpi.reorder(d.data), "ReorderParticles");
         REPORT_TIME(d.rank, domain.findNeighbors(clist, d.bbox, d.x, d.y, d.z, d.h, d.neighbors), "FindNeighbors");
+        REPORT_TIME(d.rank, domain.gravityWalk(clist, d.bbox, d.x, d.y, d.z, d.m), "GravityWalk");
         REPORT_TIME(d.rank, density.compute(clist, d.bbox, d.neighbors, d.x, d.y, d.z, d.h, d.m, d.ro), "Density");
         REPORT_TIME(d.rank, equationOfState.compute(clist, d.ro, d.mui, d.temp, d.u, d.p, d.c, d.cv), "EquationOfState");
 
+
+        Real q11 = 0.0;
+        domain.computeBBox(d.x, d.y, d.z, d.bbox);
+        Real xgem = (d.bbox.xmin + d.bbox.xmax)/2.0;
+
+        for(unsigned int i=0; i<1e6; i++)
+        {
+            q11 += d.m[i] * (d.x[i] - xgem) * (d.x[i] - xgem);
+        }
+        cout << "Q11: " << q11 << endl;
+        
         #ifdef USE_MPI
             d.resize(d.count);
             REPORT_TIME(d.rank, mpi.synchronizeHalos(&d.vx, &d.vy, &d.vz, &d.ro, &d.mui, &d.temp, &d.p, &d.c, &d.cv), "mpi::synchronizeHalos");

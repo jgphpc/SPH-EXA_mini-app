@@ -8,6 +8,7 @@
 
 namespace sphexa
 {
+
 template<typename T = double, class ArrayT = std::vector<T>>
 class Octree
 {
@@ -61,6 +62,30 @@ public:
 				neighbors.push_back((*ordering)[start+i]);
 		}
 	}
+
+	inline void computeQ(const T xi, const T yi, const T zi, const T mi)
+	{
+		//computeBBox(xi, yi, zi, bbox);
+
+
+	    T xgem = (bbox.xmin + bbox.xmax)/2.0;
+    	T ygem = (bbox.ymin + bbox.ymax)/2.0;
+    	T zgem = (bbox.zmin + bbox.zmax)/2.0;
+    	//qab = m * xac * xbc
+    	//q11 = m * x1c * x1c . x1 = x, xc = geometrical center
+        quad_moment[0] = mi * (xi - xgem) * (xi - xgem);
+        //q12 = m * x1c * x2c
+        quad_moment[1] = mi * (xi - xgem) * (yi - ygem);
+        //q13
+        quad_moment[2] = mi * (xi - xgem) * (zi - zgem);
+        //q22
+        quad_moment[3] = mi * (yi - ygem) * (yi - ygem);
+        //q23
+        quad_moment[4] = mi * (yi - ygem) * (zi - zgem);
+        //q33
+        quad_moment[5] = mi * (zi - zgem) * (zi - zgem);
+	}
+
 
 	// inline T computeMaxH()
 	// {
@@ -154,6 +179,8 @@ public:
 		cells.resize(ncells);
 		start.resize(ncells);
 		count.resize(ncells);
+		quad_moment.resize(6, 0.0);
+
 
 		for(int i=0; i<ncells; i++)
 		{
@@ -270,6 +297,49 @@ public:
 			findNeighborsRec(xi, yi, zi, ri, ngmax, neighbors);
 	}
 
+	void gravityWalk(const T xi, const T yi, const T zi, const T mi)
+	{
+		int mix = (int)floor(normalize(xi, bbox.xmin, bbox.xmax)*nX);
+		int miy = (int)floor(normalize(yi, bbox.ymin, bbox.ymax)*nY);
+		int miz = (int)floor(normalize(zi, bbox.zmin, bbox.zmax)*nZ);
+		int max = (int)floor(normalize(xi, bbox.xmin, bbox.xmax)*nX);
+		int may = (int)floor(normalize(yi, bbox.ymin, bbox.ymax)*nY);
+		int maz = (int)floor(normalize(zi, bbox.zmin, bbox.zmax)*nZ);
+
+		//quad_moment.resize(6, 0.0);
+		for(int hz=miz; hz<=maz; hz++)
+		{
+			for(int hy=miy; hy<=may; hy++)
+			{
+				for(int hx=mix; hx<=max; hx++)
+				{
+					unsigned int l = hz*nX*nY+hy*nX+hx;
+
+					local_mass = 0.0;
+					if(cells[l] != nullptr){
+						cells[l]->gravityWalk(xi, yi, zi, mi);
+						quad_moment[0] += cells[l]->local_mass * cells[l]->quad_moment[0];
+						quad_moment[1] += cells[l]->local_mass * cells[l]->quad_moment[1];
+						quad_moment[2] += cells[l]->local_mass * cells[l]->quad_moment[2];
+						quad_moment[3] += cells[l]->local_mass * cells[l]->quad_moment[3];
+						quad_moment[4] += cells[l]->local_mass * cells[l]->quad_moment[4];
+						quad_moment[5] += cells[l]->local_mass * cells[l]->quad_moment[5];
+
+						local_mass += cells[l]->local_mass;
+					}
+					else {
+						computeQ(xi, yi, zi, mi);
+					}
+				}
+			}
+		}
+	}
+
+	inline T getMass() const
+	{
+		return local_mass;
+	}
+
 public:
 	std::shared_ptr<std::vector<int>> ordering;
 
@@ -278,6 +348,8 @@ private:
 	int nX, nY, nZ;
 
 	BBox<T> bbox;
+	std::vector<T> quad_moment;
+	T local_mass;
 
 	std::vector<std::shared_ptr<Octree>> cells;
 
