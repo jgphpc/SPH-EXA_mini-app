@@ -68,9 +68,9 @@ public:
 		//computeBBox(xi, yi, zi, bbox);
 
 
-	    T xgem = (bbox.xmin + bbox.xmax)/2.0;
-    	T ygem = (bbox.ymin + bbox.ymax)/2.0;
-    	T zgem = (bbox.zmin + bbox.zmax)/2.0;
+	    T xgem = (bbox.xmin + bbox.xmax) * 0.5;
+    	T ygem = (bbox.ymin + bbox.ymax) * 0.5;
+    	T zgem = (bbox.zmin + bbox.zmax) * 0.5;
     	//qab = m * xac * xbc
     	//q11 = m * x1c * x1c . x1 = x, xc = geometrical center
         quad_moment[0] = mi * (xi - xgem) * (xi - xgem);
