@@ -4,6 +4,7 @@
 
 #include "sphexa.hpp"
 #include "SqPatch.hpp"
+#include "initial_square.hpp"
 
 using namespace std;
 using namespace sphexa;
@@ -18,12 +19,17 @@ int main()
     typedef Octree<Real> Tree;
     typedef SqPatch<Real> Dataset;
 
+    int tot_size = 1e6;
+
+    generate_initial_square(tot_size);
+
     #ifdef USE_MPI
         MPI_Init(NULL, NULL);
-        Dataset d(1e6, "bigfiles/squarepatch3D_1M.bin", MPI_COMM_WORLD);
+        Dataset d(tot_size, "bigfiles/squarepatch3D_1M.bin", MPI_COMM_WORLD);
         DistributedDomain<Real> mpi(MPI_COMM_WORLD);
     #else
-        Dataset d(1e6, "bigfiles/squarepatch3D_1M.bin");
+        // Dataset d(1e6, "bigfiles/squarepatch3D_1M.bin");
+        Dataset d(tot_size, "sqpatch.bin");
     #endif
 
     Domain<Real, Tree> domain(d.ngmin, d.ng0, d.ngmax);

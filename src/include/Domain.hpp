@@ -90,7 +90,7 @@ public:
     void gravityWalk(const std::vector<int> &clist, const BBox<T> &bbox, const ArrayT &x, const ArrayT &y, const ArrayT &z, const ArrayT &m)
     {
         int n = clist.size();
-        std::cout << "N= " << n <<std:endl;
+        std::cout << "N= " << n <<std::endl;
         #pragma omp parallel for
         for(int pi=0; pi<n; pi++)
         {

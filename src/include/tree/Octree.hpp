@@ -63,7 +63,7 @@ public:
 		}
 	}
 
-	inline void computeQ(const T xi, const T yi, const T zi, const T mi)
+	inline void computeQ(const T xi, const T yi, const T zi, const T mi, std::vector<T> quad_moment)
 	{
 		//computeBBox(xi, yi, zi, bbox);
 
@@ -328,7 +328,7 @@ public:
 						local_mass += cells[l]->local_mass;
 					}
 					else {
-						computeQ(xi, yi, zi, mi);
+						computeQ(xi, yi, zi, mi, &quad_moment);
 					}
 				}
 			}
