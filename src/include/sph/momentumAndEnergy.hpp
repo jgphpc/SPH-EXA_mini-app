@@ -44,13 +44,15 @@ namespace sph
         const T gradh_j = 1.0;
         const T ep1 = 0.2, ep2 = 0.02, mre = 4.0;
         
-        #ifdef USE_OMP_TARGET
+        #ifdef SPEC_OPENMP_TARGET
             const int np = d.x.size();
             const int allNeighbors = n*ngmax;
             #pragma omp target teams map(to: clist[0:n], neighbors[0:allNeighbors], neighborsCount[0:n], x[0:np], y[0:np], z[0:np], vx[0:np], vy[0:np], vz[0:np], h[0:np], m[0:np], ro[0:np], p[0:np], c[0:np]) map(from: grad_P_x[0:n], grad_P_y[0:n], grad_P_z[0:n], du[0:n])
             #pragma omp distribute parallel for
         #else
+	#ifdef SPEC_OPENMP
             #pragma omp parallel for
+        #endif
         #endif
         for(int pi=0; pi<n; pi++)
         {

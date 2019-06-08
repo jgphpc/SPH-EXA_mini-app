@@ -30,7 +30,9 @@ namespace sph
 
 		T mini = INFINITY;
 
+                #ifdef SPEC_OPENMP
 		#pragma omp parallel for reduction(min:mini)
+                #endif
 		for(int pi=0; pi<n; pi++)
 		{
 			int i = clist[pi];
@@ -47,7 +49,9 @@ namespace sph
         	MPI_Allreduce(MPI_IN_PLACE, &mini, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
         #endif
 
+                #ifdef SPEC_OPENMP
 		#pragma omp parallel for
+                #endif
         for(int pi=0; pi<n; pi++)
 		{
 			int i = clist[pi];

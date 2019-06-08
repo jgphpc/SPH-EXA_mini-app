@@ -26,7 +26,9 @@ public:
 		d.neighbors.resize(n*ngmax);
 		d.neighborsCount.resize(n);
 
+                #ifdef SPEC_OPENMP
 		#pragma omp parallel for schedule(guided)
+                #endif
 		for(int pi=0; pi<n; pi++)
 		{
 			int i = clist[pi];
@@ -45,7 +47,9 @@ public:
 	long long int neighborsSum(const std::vector<int> &clist, const Dataset &d)
 	{
 	    long long int sum = 0;
+            #ifdef SPEC_OPENMP
 	    #pragma omp parallel for reduction (+:sum)
+            #endif
 	    for(unsigned int i=0; i<clist.size(); i++)
 	        sum += d.neighborsCount[i];
 
@@ -99,7 +103,9 @@ private:
 
 		int n = clist.size();
 
+                #ifdef SPEC_OPENMP
 		#pragma omp parallel for
+                #endif
 		for(int pi=0; pi<n; pi++)
 		{
 			int i = clist[pi];

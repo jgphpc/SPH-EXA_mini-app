@@ -27,7 +27,9 @@ namespace sph
         T &eint = d.eint;
 
 		T ecintmp = 0.0, einttmp = 0.0;
+                #ifdef SPEC_OPENMP
 		#pragma omp parallel for reduction (+:ecintmp,einttmp)
+                #endif
         for(int pi=0; pi<n; pi++)
         {
             int i = clist[pi];

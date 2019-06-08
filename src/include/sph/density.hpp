@@ -33,13 +33,15 @@ namespace sph
 		const T sincIndex = d.sincIndex;
 		const T K = d.K;
 		
-		#ifdef USE_OMP_TARGET
+		#ifdef SPEC_OPENMP_TARGET
 			const int np = d.x.size();
 			const int allNeighbors = n*ngmax;
 			#pragma omp target teams map(to: clist[0:n], neighbors[0:allNeighbors], neighborsCount[0:n], m[0:np], h[0:np], x[0:np], y[0:np], z[0:np]) map(from: ro[0:n])
 			#pragma omp distribute parallel for
 		#else
+                #ifdef SPEC_OPENMP
 			#pragma omp parallel for
+		#endif
 		#endif
 		for(int pi=0; pi<n; pi++)
 		{
@@ -80,7 +82,9 @@ namespace sph
 		// Initialization of fluid density at rest
 		if(d.iteration == 0)
         {
+                #ifdef SPEC_OPENMP
 			#pragma omp parallel for
+		#endif
             for(int pi=0; pi<n; pi++)
             {
             	const int i = clist[pi];

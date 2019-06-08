@@ -29,7 +29,9 @@ namespace sph
 		//const T chi = (1000.0 / 7.0) * (35.0 * 35.0);
 		const T chi = (density0 / heatCapacityRatio) * (speedOfSound0 * speedOfSound0);
 
+                #ifdef SPEC_OPENMP
 		#pragma omp parallel for
+		#endif
 		for(int pi=0; pi<n; pi++)
 		{
 			const int i = clist[pi];

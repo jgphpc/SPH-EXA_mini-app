@@ -58,8 +58,9 @@ public:
 
         const double omega = 5.0;
         const double myPI = std::acos(-1.0);
-
+        #ifdef SPEC_OPENMP
         #pragma omp parallel for
+        #endif
         for (int i = 0; i < side; ++i)
         {
             double lz = -0.5 + 1.0 / (2.0 * side) + i * 1.0 / side;

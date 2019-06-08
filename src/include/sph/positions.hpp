@@ -33,7 +33,9 @@ namespace sph
 
 		const BBox<T> bbox = d.bbox;
 
+                #ifdef SPEC_OPENMP
 		#pragma omp parallel for
+                #endif
 		for(int pi=0; pi<n; pi++)
 		{
 			int i = clist[pi];

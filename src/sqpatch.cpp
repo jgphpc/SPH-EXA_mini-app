@@ -82,8 +82,13 @@ int main(int argc, char **argv)
         timer.stop();
         if(d.rank == 0) cout << "=== Total time for iteration(" << d.iteration << ") " << timer.duration() << "s" << endl << endl;
     }
-
-    constants.close();
+     constants.close();
+     if(d.rank == 0)
+     {
+         std::ofstream final_output("sqpatch.dat");
+         final_output << d.etot << endl;
+         final_output.close();
+     }
 
     #ifdef USE_MPI
         MPI_Finalize();
