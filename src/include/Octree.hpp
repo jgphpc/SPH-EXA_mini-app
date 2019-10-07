@@ -26,10 +26,7 @@ public:
 
     Octree() {}
 
-    ~Octree()
-    {
-        cells.clear();
-    }
+    ~Octree() { cells.clear(); }
 
     std::vector<std::shared_ptr<Octree>> cells;
 
@@ -80,8 +77,7 @@ public:
             int ordi = localPadding + i;
 
             T dist = distancesq(xi, yi, zi, x[ordi], y[ordi], z[ordi]);
-            if (dist < r2 && ordi != id && neighborsCount < ngmax)
-               neighbors[neighborsCount++] = ordi;
+            if (dist < r2 && ordi != id && neighborsCount < ngmax) neighbors[neighborsCount++] = ordi;
         }
     }
 
@@ -181,7 +177,7 @@ public:
 
     void print(int l = 0)
     {
-        if(global)
+        if (global)
         {
             for (int i = 0; i < l; i++)
                 printf("   ");
@@ -195,7 +191,7 @@ public:
         }
     }
 
-    void makeSubCells()
+    virtual void makeSubCells()
     {
         cells.resize(ncells);
 
@@ -278,7 +274,7 @@ public:
         }
     }
 
-    int globalRebalance(T xmin, T xmax, T ymin, T ymax,  T zmin, T zmax)
+    int globalRebalance(T xmin, T xmax, T ymin, T ymax, T zmin, T zmax)
     {
         this->xmin = xmin;
         this->xmax = xmax;
@@ -304,8 +300,7 @@ public:
             this->globalNodeCount = 1;
 
             // Closing non global branches
-            if((int)cells.size() == ncells && cells[0]->global == false)
-                cells.clear();
+            if ((int)cells.size() == ncells && cells[0]->global == false) cells.clear();
 
             if ((int)cells.size() == ncells)
             {
@@ -343,7 +338,7 @@ public:
                     nsplits += ncells;
                     for (int i = 0; i < ncells; i++)
                     {
-                        //cells[i]->approximateRec(cellList[i], x, y, z, h);
+                        // cells[i]->approximateRec(cellList[i], x, y, z, h);
                         cells[i]->globalNodeCount = 1;
                         cells[i]->global = true;
                         this->globalNodeCount += cells[i]->globalNodeCount;
@@ -359,8 +354,10 @@ public:
         return nsplits;
     }
 
-    void buildGlobalTreeAndGlobalCountAndGlobalMaxHRec(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &z, const std::vector<T> &h,
-                              std::vector<int> &ordering, std::vector<int> &globalParticleCount, std::vector<T> &globalMaxH, int padding = 0, int ptri = 0)
+    void buildGlobalTreeAndGlobalCountAndGlobalMaxHRec(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y,
+                                                       const std::vector<T> &z, const std::vector<T> &h, std::vector<int> &ordering,
+                                                       std::vector<int> &globalParticleCount, std::vector<T> &globalMaxH, int padding = 0,
+                                                       int ptri = 0)
     {
         this->localPadding = padding;
         this->localParticleCount = 0;
@@ -377,7 +374,8 @@ public:
         {
             for (int i = 0; i < ncells; i++)
             {
-                cells[i]->buildGlobalTreeAndGlobalCountAndGlobalMaxHRec(cellList[i], x, y, z, h, ordering, globalParticleCount, globalMaxH, padding, ptri);
+                cells[i]->buildGlobalTreeAndGlobalCountAndGlobalMaxHRec(cellList[i], x, y, z, h, ordering, globalParticleCount, globalMaxH,
+                                                                        padding, ptri);
                 this->localParticleCount += cells[i]->localParticleCount;
                 this->globalMaxH = std::max(this->globalMaxH, cells[i]->globalMaxH);
                 padding += cells[i]->localParticleCount;
@@ -389,8 +387,7 @@ public:
             for (int i = 0; i < (int)list.size(); i++)
             {
                 ordering[padding + i] = list[i];
-                if(h[list[i]] > this->globalMaxH)
-                    this->globalMaxH = h[list[i]];
+                if (h[list[i]] > this->globalMaxH) this->globalMaxH = h[list[i]];
             }
             this->localParticleCount = list.size();
         }
@@ -399,7 +396,8 @@ public:
         globalParticleCount[it] = this->localParticleCount;
     }
 
-    void buildGlobalTreeAndGlobalCountAndGlobalMaxH(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &z, const std::vector<T> &h, std::vector<int> &ordering)
+    void buildGlobalTreeAndGlobalCountAndGlobalMaxH(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y,
+                                                    const std::vector<T> &z, const std::vector<T> &h, std::vector<int> &ordering)
     {
         std::vector<int> globalParticleCount(globalNodeCount, 0);
         std::vector<T> globalMaxH(globalNodeCount, 0.0);
@@ -413,12 +411,13 @@ public:
         setMaxHPerNode(globalMaxH);
     }
 
-    void buildTreeWithHalosRec(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &z, std::vector<int> &ordering, int padding = 0)
+    void buildTreeWithHalosRec(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &z,
+                               std::vector<int> &ordering, int padding = 0)
     {
         this->localPadding = padding;
-        this->localParticleCount = 0;// this->globalParticleCount;
+        this->localParticleCount = 0; // this->globalParticleCount;
 
-        if(assignee == -1 || assignee == comm_rank || halo == true)
+        if (assignee == -1 || assignee == comm_rank || halo == true)
         {
             std::vector<std::vector<int>> cellList(ncells);
             distributeParticles(list, x, y, z, cellList);
@@ -432,7 +431,7 @@ public:
                     padding += cells[i]->localParticleCount;
                 }
             }
-            else if(assignee == comm_rank || halo == true)
+            else if (assignee == comm_rank || halo == true)
             {
                 // If this is a halo node then we may not have all the particles yet
                 // But we know how much space to reserve!
@@ -443,13 +442,14 @@ public:
         }
     }
 
-    void buildTreeWithHalos(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &z, std::vector<int> &ordering)
+    void buildTreeWithHalos(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &z,
+                            std::vector<int> &ordering)
     {
         buildTreeWithHalosRec(list, x, y, z, ordering);
     }
 
-    void buildTreeRec(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &z,
-                              std::vector<int> &ordering, int padding = 0)
+    virtual void buildTreeRec(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &z,
+                              const std::vector<T> &m, std::vector<int> &ordering, int padding = 0)
     {
         this->localPadding = padding;
         this->localParticleCount = list.size();
@@ -457,18 +457,17 @@ public:
         std::vector<std::vector<int>> cellList(ncells);
         distributeParticles(list, x, y, z, cellList);
 
-        if((int)cells.size() == 0 && list.size() > bucketSize)
-            makeSubCells();
+        if ((int)cells.size() == 0 && list.size() > bucketSize) makeSubCells();
 
         if ((int)cells.size() == ncells)
         {
             for (int i = 0; i < ncells; i++)
             {
-                #pragma omp task shared(cellList, x, y, z, ordering) firstprivate(padding)
-                cells[i]->buildTreeRec(cellList[i], x, y, z, ordering, padding);
+#pragma omp task shared(cellList, x, y, z, ordering) firstprivate(padding)
+                cells[i]->buildTreeRec(cellList[i], x, y, z, m, ordering, padding);
                 padding += cellList[i].size();
             }
-            #pragma omp taskwait
+#pragma omp taskwait
         }
         else
         {
@@ -477,11 +476,12 @@ public:
         }
     }
 
-    void buildTree(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &z, std::vector<int> &ordering)
+    void buildTree(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &z,
+                   const std::vector<T> &m, std::vector<int> &ordering)
     {
-        #pragma omp parallel
-        #pragma omp single
-        buildTreeRec(list, x, y, z, ordering);
+#pragma omp parallel
+#pragma omp single
+        buildTreeRec(list, x, y, z, m, ordering);
     }
 
     void assignProcessesRec(std::vector<int> &work, int &pi)
@@ -549,15 +549,11 @@ public:
 
     inline bool overlap(Octree *a)
     {
-    	T radius = a->globalMaxH * 2.0;
+        T radius = a->globalMaxH * 2.0;
 
-    	//Check if Box1's max is greater than Box2's min and Box1's min is less than Box2's max
-	    return(a->xmax+radius > xmin && 
-	    a->xmin-radius < xmax &&
-	    a->ymax+radius > ymin &&
-	    a->ymin-radius < ymax &&
-	    a->zmax+radius > zmin &&
-	    a->zmin-radius < zmax);
+        // Check if Box1's max is greater than Box2's min and Box1's min is less than Box2's max
+        return (a->xmax + radius > xmin && a->xmin - radius < xmax && a->ymax + radius > ymin && a->ymin - radius < ymax &&
+                a->zmax + radius > zmin && a->zmin - radius < zmax);
     }
 
     int findHalosList(Octree *a, std::map<int, std::map<int, Octree<T> *>> &toSendHalos, int ptri = 0)
@@ -595,10 +591,7 @@ public:
                     {
                         if (toSendHalos[a->assignee].count(ptri) == 0)
                         {
-                            if (a->assignee == comm_rank)
-                            {
-                                haloCount += globalParticleCount;
-                            }
+                            if (a->assignee == comm_rank) { haloCount += globalParticleCount; }
                             toSendHalos[a->assignee][ptri] = this;
                         }
                     }
@@ -662,7 +655,7 @@ public:
                             // int hxx = PBCx ? (hx % nX) + (hx < 0) * nX : hx;
 
                             // unsigned int l = hzz * nY * nX + hyy * nX + hxx;
-                            
+
                             xmin = xmin + displx;
                             xmax = xmax + displx;
                             ymin = ymin + disply;
@@ -762,9 +755,9 @@ public:
 
     void mapListRec(std::vector<int> &clist, int &it)
     {
-        if((int)cells.size() == ncells)
+        if ((int)cells.size() == ncells)
         {
-            if(assignee == -1 || assignee == comm_rank)
+            if (assignee == -1 || assignee == comm_rank)
             {
                 for (int i = 0; i < ncells; i++)
                 {
@@ -789,6 +782,168 @@ public:
         int it = 0;
         mapListRec(clist, it);
     }
+};
+
+template <typename T>
+struct GravityOctree : Octree<T>
+{
+    GravityOctree(const T xmin, const T xmax, const T ymin, const T ymax, const T zmin, const T zmax, int comm_rank, int comm_size)
+        : Octree<T>(xmin, xmax, ymin, ymax, zmin, zmax, comm_rank, comm_size)
+    {
+    }
+
+    GravityOctree()
+        : Octree<T>()
+    {
+    }
+
+    void gravityBuildTree(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &z,
+                          const std::vector<T> &m)
+    {
+        calcGeometricalCenter();
+
+        for (const auto i : list)
+        {
+            const T xx = x[i];
+            const T yy = y[i];
+            const T zz = z[i];
+
+            const T m_i = m[i];
+
+            xcm = xx * m_i;
+            ycm = yy * m_i;
+            zcm = zz * m_i;
+
+            mTot += m_i;
+
+            const T rx = xx - xce;
+            const T ry = yy - yce;
+            const T rz = zz - zce;
+
+            qxxa += rx * rx * m_i;
+            qxya += rx * ry * m_i;
+            qxza += rx * rz * m_i;
+            qyya += ry * ry * m_i;
+            qyza += ry * rz * m_i;
+            qzza += rz * rz * m_i;
+        }
+
+        const size_t np = list.size();
+        if (np > 1)
+        {
+            xcm /= mTot;
+            ycm /= mTot;
+            zcm /= mTot;
+
+            const T rx = xce - xcm;
+            const T ry = yce - ycm;
+            const T rz = zce - zcm;
+
+            qxx = qxxa - rx * rx * mTot;
+            qxy = qxya - rx * ry * mTot;
+            qxx = qxza - rx * rz * mTot;
+            qyy = qyya - ry * ry * mTot;
+            qyz = qyza - ry * rz * mTot;
+            qzz = qzza - rz * rz * mTot;
+
+            trq = qxx + qyy + qzz;
+        }
+        else if (np == 1)
+        {
+            xcm = x[0];
+            ycm = y[0];
+            zcm = z[0];
+
+            xce = x[0];
+            yce = y[0];
+            zce = z[0];
+
+            qxx = 0;
+            qxy = 0;
+            qxx = 0;
+            qyy = 0;
+            qyz = 0;
+            qzz = 0;
+
+            trq = 0;
+        }
+    }
+
+    inline void calcGeometricalCenter()
+    {
+        xce = (this->xmin + this->xmax) / 2.0;
+        yce = (this->ymin + this->ymax) / 2.0;
+        zce = (this->zmin + this->zmax) / 2.0;
+    }
+
+    void buildTreeRec(const std::vector<int> &list, const std::vector<T> &x, const std::vector<T> &y, const std::vector<T> &z,
+                      const std::vector<T> &m, std::vector<int> &ordering, int padding = 0) override
+    {
+
+        this->localPadding = padding;
+        this->localParticleCount = list.size();
+
+        gravityBuildTree(list, x, y, z, m);
+        printf("GravityTree buildTreeRec. Particles=%lu: xcm=%f, ycm=%f, zcm=%f\n", list.size(), xcm, ycm, zcm);
+
+        std::vector<std::vector<int>> cellList(Octree<T>::ncells);
+        this->distributeParticles(list, x, y, z, cellList);
+
+        if ((int)this->cells.size() == 0 && list.size() > this->bucketSize) this->makeSubCells();
+
+        if ((int)this->cells.size() == this->ncells)
+        {
+            for (int i = 0; i < this->ncells; i++)
+            {
+#pragma omp task shared(cellList, x, y, z, ordering) firstprivate(padding)
+                this->cells[i]->buildTreeRec(cellList[i], x, y, z, m, ordering, padding);
+                padding += cellList[i].size();
+            }
+#pragma omp taskwait
+        }
+        else
+        {
+            for (int i = 0; i < (int)list.size(); i++)
+                ordering[padding + i] = list[i];
+        }
+    }
+
+    void makeSubCells() override
+    {
+        this->cells.resize(this->ncells);
+
+        for (int hz = 0; hz < this->nZ; hz++)
+        {
+            for (int hy = 0; hy < this->nY; hy++)
+            {
+                for (int hx = 0; hx < this->nX; hx++)
+                {
+                    T ax = this->xmin + hx * (this->xmax - this->xmin) / this->nX;
+                    T bx = this->xmin + (hx + 1) * (this->xmax - this->xmin) / this->nX;
+                    T ay = this->ymin + hy * (this->ymax - this->ymin) / this->nY;
+                    T by = this->ymin + (hy + 1) * (this->ymax - this->ymin) / this->nY;
+                    T az = this->zmin + hz * (this->zmax - this->zmin) / this->nZ;
+                    T bz = this->zmin + (hz + 1) * (this->zmax - this->zmin) / this->nZ;
+
+                    unsigned int i = hz * this->nX * this->nY + hy * this->nX + hx;
+
+                    if (this->cells[i] == nullptr)
+                        this->cells[i] = std::make_shared<GravityOctree>(ax, bx, ay, by, az, bz, this->comm_rank, this->comm_size);
+                }
+            }
+        }
+    }
+
+    T mTot = 0;
+    T xce, yce, zce;
+    T xcm, ycm, zcm;
+
+    T qxx, qxy, qxz;
+    T qyx, qyy, qyz;
+    T qzx, qzy, qzz;
+
+    T qxxa = 0.0, qxya = 0.0, qxza = 0.0, qyya = 0.0, qyza = 0.0, qzza = 0.0;
+    T trq;
 };
 
 } // namespace sphexa
